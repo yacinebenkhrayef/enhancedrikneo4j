@@ -1,0 +1,235 @@
+// --- SCRIPT 1: SCHEMA ENHANCEMENT (NODES & PROPERTIES) ---
+// This script adds new node labels and crucial properties to existing and new nodes.
+
+// 1. Add new properties to existing Person nodes
+//    - This assumes your Person nodes already exist from Rik van Bruggen's model.
+//    - You might need to adjust properties based on your actual data.
+MATCH (p:Person)
+SET p.employeeId = CASE
+    WHEN p.name = 'Alice' THEN 'EMP001'
+    WHEN p.name = 'Bob' THEN 'EMP002'
+    WHEN p.name = 'Charlie' THEN 'EMP003'
+    WHEN p.name = 'Diana' THEN 'EMP004'
+    WHEN p.name = 'Eve' THEN 'EMP005'
+    WHEN p.name = 'Frank' THEN 'EMP006'
+    WHEN p.name = 'Grace' THEN 'EMP007'
+    WHEN p.name = 'Heidi' THEN 'EMP008'
+    WHEN p.name = 'Ivan' THEN 'EMP009'
+    WHEN p.name = 'Judy' THEN 'EMP010'
+    ELSE 'EMP' + toString(rand() * 1000000) // Assign a random ID if not matched
+END,
+p.hireDate = CASE
+    WHEN p.name = 'Alice' THEN date('2018-01-15')
+    WHEN p.name = 'Bob' THEN date('2019-03-20')
+    WHEN p.name = 'Charlie' THEN date('2020-07-01')
+    WHEN p.name = 'Diana' THEN date('2017-11-10')
+    WHEN p.name = 'Eve' THEN date('2021-02-28')
+    WHEN p.name = 'Frank' THEN date('2020-05-15')
+    WHEN p.name = 'Grace' THEN date('2019-09-01')
+    WHEN p.name = 'Heidi' THEN date('2023-01-01')
+    WHEN p.name = 'Ivan' THEN date('2022-04-10')
+    WHEN p.name = 'Judy' THEN date('2018-08-22')
+    ELSE date('2015-01-01') + duration({days: toInteger(rand() * 365 * 10)})
+END,
+p.employmentStatus = 'Active',
+p.location = CASE
+    WHEN p.name IN ['Alice', 'Bob', 'Charlie'] THEN 'Tunis'
+    WHEN p.name IN ['Diana', 'Eve'] THEN 'Sfax'
+    ELSE 'Sousse'
+END,
+p.isManager = CASE
+    WHEN p.name IN ['Alice', 'Diana', 'Frank'] THEN true
+    ELSE false
+END,
+p.yearsOfExperience = toInteger(rand() * 15) + 1, // Random years of experience
+p.educationLevel = CASE toInteger(rand() * 3)
+    WHEN 0 THEN 'Bachelors'
+    WHEN 1 THEN 'Masters'
+    ELSE 'PhD'
+END;
+
+// 2. Add new properties to existing Competency nodes
+MATCH (c:Competency)
+SET c.category = CASE
+    WHEN c.name IN ['Java', 'Python', 'Neo4j', 'Cypher', 'SQL', 'Machine Learning', 'Data Science'] THEN 'Technical'
+    WHEN c.name IN ['Leadership', 'Communication', 'Teamwork', 'Problem Solving'] THEN 'Soft Skill'
+    WHEN c.name IN ['French', 'English', 'Arabic'] THEN 'Language'
+    ELSE 'Other'
+END,
+c.description = 'Description for ' + c.name;
+
+// 3. Create new Node Labels and their properties
+//    - JobRole: Represents a type of job role (e.g., "Software Engineer")
+//    - Department: Represents an organizational department
+//    - Project: Represents a company project
+//    - Team: Represents a specific team within the company
+//    - Location: Represents a physical work location (if not already a Person property)
+//    - Application: Represents a job application instance
+
+MERGE (jr:JobRole {title: 'Software Engineer'})
+ON CREATE SET jr.description = 'Develops software applications.', jr.salaryBand = '70k-120k', jr.requiredExperienceLevel = 'Mid';
+MERGE (jr:JobRole {title: 'Senior Data Scientist'})
+ON CREATE SET jr.description = 'Leads data analysis and modeling initiatives.', jr.salaryBand = '100k-150k', jr.requiredExperienceLevel = 'Senior';
+MERGE (jr:JobRole {title: 'HR Manager'})
+ON CREATE SET jr.description = 'Manages HR operations and employee relations.', jr.salaryBand = '80k-130k', jr.requiredExperienceLevel = 'Senior';
+MERGE (jr:JobRole {title: 'Marketing Specialist'})
+ON CREATE SET jr.description = 'Develops and executes marketing campaigns.', jr.salaryBand = '60k-100k', jr.requiredExperienceLevel = 'Mid';
+MERGE (jr:JobRole {title: 'Product Manager'})
+ON CREATE SET jr.description = 'Defines product vision and strategy.', jr.salaryBand = '90k-140k', jr.requiredExperienceLevel = 'Senior';
+MERGE (jr:JobRole {title: 'Junior Software Engineer'})
+ON CREATE SET jr.description = 'Entry-level software development.', jr.salaryBand = '50k-80k', jr.requiredExperienceLevel = 'Junior';
+
+MERGE (d:Department {name: 'Engineering'})
+ON CREATE SET d.location = 'Tunis', d.budget = 5000000;
+MERGE (d:Department {name: 'Data Science'})
+ON CREATE SET d.location = 'Tunis', d.budget = 3000000;
+MERGE (d:Department {name: 'Human Resources'})
+ON CREATE SET d.location = 'Sfax', d.budget = 1000000;
+MERGE (d:Department {name: 'Marketing'})
+ON CREATE SET d.location = 'Sousse', d.budget = 2000000;
+MERGE (d:Department {name: 'Product Management'})
+ON CREATE SET d.location = 'Tunis', d.budget = 1500000;
+
+MERGE (p:Project {name: 'Project Alpha'})
+ON CREATE SET p.startDate = date('2024-01-01'), p.endDate = date('2024-12-31'), p.status = 'Completed';
+MERGE (p:Project {name: 'Project Beta'})
+ON CREATE SET p.startDate = date('2025-03-01'), p.endDate = date('2025-09-30'), p.status = 'Active';
+MERGE (p:Project {name: 'Project Gamma'})
+ON CREATE SET p.startDate = date('2025-07-01'), p.endDate = date('2026-06-30'), p.status = 'Planned';
+
+MERGE (t:Team {name: 'Backend Devs'})
+ON CREATE SET t.type = 'Departmental';
+MERGE (t:Team {name: 'AI Innovations'})
+ON CREATE SET t.type = 'Cross-functional';
+MERGE (t:Team {name: 'Talent Acquisition'})
+ON CREATE SET t.type = 'HR';
+
+MERGE (l:Location {city: 'Tunis', country: 'Tunisia'})
+ON CREATE SET l.population = 2700000;
+MERGE (l:Location {city: 'Sfax', country: 'Tunisia'})
+ON CREATE SET l.population = 900000;
+MERGE (l:Location {city: 'Sousse', country: 'Tunisia'})
+ON CREATE SET l.population = 600000;
+
+// Applications will be created as relationships are formed
+// Example: (app:Application {applicationDate: date('2025-07-20'), status: 'Submitted'})
+
+// --- SCRIPT 2: RELATIONSHIP ENHANCEMENT ---
+// This script creates new relationship types and adds properties to them.
+
+// 1. Person to Department relationships
+MATCH (p:Person {name: 'Alice'}), (d:Department {name: 'Engineering'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Bob'}), (d:Department {name: 'Data Science'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Charlie'}), (d:Department {name: 'Engineering'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Diana'}), (d:Department {name: 'Human Resources'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Eve'}), (d:Department {name: 'Marketing'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Frank'}), (d:Department {name: 'Product Management'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Grace'}), (d:Department {name: 'Data Science'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Heidi'}), (d:Department {name: 'Engineering'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Ivan'}), (d:Department {name: 'Human Resources'}) MERGE (p)-[:WORKS_IN]->(d);
+MATCH (p:Person {name: 'Judy'}), (d:Department {name: 'Marketing'}) MERGE (p)-[:WORKS_IN]->(d);
+
+// 2. Managerial relationships (Person to Person)
+MATCH (p1:Person {name: 'Alice'}), (p2:Person {name: 'Bob'}) MERGE (p1)-[:MANAGES]->(p2);
+MATCH (p1:Person {name: 'Alice'}), (p2:Person {name: 'Charlie'}) MERGE (p1)-[:MANAGES]->(p2);
+MATCH (p1:Person {name: 'Diana'}), (p2:Person {name: 'Ivan'}) MERGE (p1)-[:MANAGES]->(p2);
+MATCH (p1:Person {name: 'Frank'}), (p2:Person {name: 'Eve'}) MERGE (p1)-[:MANAGES]->(p2);
+
+// 3. Team membership relationships
+MATCH (p:Person {name: 'Alice'}), (t:Team {name: 'Backend Devs'}) MERGE (p)-[:MEMBER_OF {startDate: date('2024-01-01'), roleInTeam: 'Team Lead'}]->(t);
+MATCH (p:Person {name: 'Charlie'}), (t:Team {name: 'Backend Devs'}) MERGE (p)-[:MEMBER_OF {startDate: date('2024-03-15'), roleInTeam: 'Developer'}]->(t);
+MATCH (p:Person {name: 'Bob'}), (t:Team {name: 'AI Innovations'}) MERGE (p)-[:MEMBER_OF {startDate: date('2025-04-01'), roleInTeam: 'Data Scientist'}]->(t);
+MATCH (p:Person {name: 'Grace'}), (t:Team {name: 'AI Innovations'}) MERGE (p)-[:MEMBER_OF {startDate: date('2025-04-01'), roleInTeam: 'AI Engineer'}]->(t);
+MATCH (p:Person {name: 'Diana'}), (t:Team {name: 'Talent Acquisition'}) MERGE (p)-[:MEMBER_OF {startDate: date('2023-01-01'), roleInTeam: 'Manager'}]->(t);
+MATCH (p:Person {name: 'Ivan'}), (t:Team {name: 'Talent Acquisition'}) MERGE (p)-[:MEMBER_OF {startDate: date('2023-03-01'), roleInTeam: 'Recruiter'}]->(t);
+
+// 4. Project participation relationships
+MATCH (p:Person {name: 'Alice'}), (proj:Project {name: 'Project Alpha'}) MERGE (p)-[:WORKS_ON {startDate: date('2024-01-01'), endDate: date('2024-12-31'), roleOnProject: 'Lead Developer'}]->(proj);
+MATCH (p:Person {name: 'Bob'}), (proj:Project {name: 'Project Beta'}) MERGE (p)-[:WORKS_ON {startDate: date('2025-03-01'), roleOnProject: 'Data Scientist'}]->(proj);
+MATCH (p:Person {name: 'Grace'}), (proj:Project {name: 'Project Beta'}) MERGE (p)-[:WORKS_ON {startDate: date('2025-03-01'), roleOnProject: 'AI Engineer'}]->(proj);
+MATCH (p:Person {name: 'Charlie'}), (proj:Project {name: 'Project Gamma'}) MERGE (p)-[:WORKS_ON {startDate: date('2025-07-01'), roleOnProject: 'Developer'}]->(proj);
+
+// 5. JobRole to Competency requirements
+MATCH (jr:JobRole {title: 'Software Engineer'}), (c:Competency {name: 'Java'}) MERGE (jr)-[:REQUIRES_SKILL {minimumLevel: 'Advanced'}]->(c);
+MATCH (jr:JobRole {title: 'Software Engineer'}), (c:Competency {name: 'SQL'}) MERGE (jr)-[:REQUIRES_SKILL {minimumLevel: 'Intermediate'}]->(c);
+MATCH (jr:JobRole {title: 'Senior Data Scientist'}), (c:Competency {name: 'Python'}) MERGE (jr)-[:REQUIRES_SKILL {minimumLevel: 'Expert'}]->(c);
+MATCH (jr:JobRole {title: 'Senior Data Scientist'}), (c:Competency {name: 'Machine Learning'}) MERGE (jr)-[:REQUIRES_SKILL {minimumLevel: 'Expert'}]->(c);
+MATCH (jr:JobRole {title: 'HR Manager'}), (c:Competency {name: 'Leadership'}) MERGE (jr)-[:REQUIRES_SKILL {minimumLevel: 'Advanced'}]->(c);
+MATCH (jr:JobRole {title: 'HR Manager'}), (c:Competency {name: 'Communication'}) MERGE (jr)-[:REQUIRES_SKILL {minimumLevel: 'Expert'}]->(c);
+
+// 6. Person's historical roles (Employee Mobility)
+// This is crucial for career path analysis.
+MATCH (p:Person {name: 'Alice'})
+MERGE (jr1:JobRole {title: 'Junior Software Engineer'})
+MERGE (jr2:JobRole {title: 'Software Engineer'})
+MERGE (p)-[:HELD_ROLE {startDate: date('2018-01-15'), endDate: date('2019-12-31'), titleAtTime: 'Junior Software Engineer'}]->(jr1)
+MERGE (p)-[:HELD_ROLE {startDate: date('2020-01-01'), titleAtTime: 'Software Engineer'}]->(jr2);
+
+MATCH (p:Person {name: 'Bob'})
+MERGE (jr1:JobRole {title: 'Data Analyst'}) // Assuming a previous role
+MERGE (jr2:JobRole {title: 'Data Scientist'}) // Assuming current role
+MERGE (p)-[:HELD_ROLE {startDate: date('2019-03-20'), endDate: date('2021-12-31'), titleAtTime: 'Data Analyst'}]->(jr1)
+MERGE (p)-[:HELD_ROLE {startDate: date('2022-01-01'), titleAtTime: 'Data Scientist'}]->(jr2);
+
+// 7. Person's desired future roles
+MATCH (p:Person {name: 'Bob'}), (jr:JobRole {title: 'Senior Data Scientist'}) MERGE (p)-[:DESIRES_ROLE]->(jr);
+MATCH (p:Person {name: 'Charlie'}), (jr:JobRole {title: 'Product Manager'}) MERGE (p)-[:DESIRES_ROLE]->(jr);
+
+// 8. Formal training/certification
+MATCH (p:Person {name: 'Bob'}), (c:Competency {name: 'Machine Learning'}) MERGE (p)-[:TRAINED_IN {completionDate: date('2023-11-01'), certification: 'Coursera'}]->(c);
+MATCH (p:Person {name: 'Alice'}), (c:Competency {name: 'Leadership'}) MERGE (p)-[:TRAINED_IN {completionDate: date('2022-09-15'), certification: 'Internal Program'}]->(c);
+
+// --- SCRIPT 3: SAMPLE HIRING PROCESS DATA ---
+// This script demonstrates how to model a simple hiring process for bottleneck analysis.
+
+// 1. Create a specific job opening (distinct from JobRole type)
+MERGE (jo:JobOpening {id: 'JOB001', title: 'Senior Data Scientist - Q3 2025', status: 'Open', postedDate: date('2025-07-01')})
+MERGE (jr:JobRole {title: 'Senior Data Scientist'})
+MERGE (jo)-[:IS_A_TYPE_OF]->(jr);
+
+// 2. Connect JobOpening to Department and Hiring Manager
+MATCH (jo:JobOpening {id: 'JOB001'}), (d:Department {name: 'Data Science'}) MERGE (jo)-[:FOR_DEPARTMENT]->(d);
+MATCH (hm:Person {name: 'Alice'}) // Alice is a manager in Engineering, let's assume she's also a hiring manager for this role
+MERGE (jo)-[:REQUESTED_BY]->(hm);
+
+// 3. Create sample applications
+// Candidate 1 (Internal): Bob Johnson
+MATCH (p:Person {name: 'Bob'}), (jo:JobOpening {id: 'JOB001'})
+MERGE (app1:Application {id: 'APP001', applicationDate: date('2025-07-05'), status: 'Interviewing'})
+MERGE (p)-[:APPLIED_FOR]->(jo)
+MERGE (app1)-[:BY_CANDIDATE]->(p)
+MERGE (app1)-[:FOR_JOB_OPENING]->(jo);
+
+// Candidate 2 (External): New Person
+MERGE (p_ext:Person {name: 'External Candidate X', isCandidate: true, email: 'candidateX@example.com'})
+MERGE (app2:Application {id: 'APP002', applicationDate: date('2025-07-10'), status: 'Rejected'})
+MERGE (p_ext)-[:APPLIED_FOR]->(jo)
+MERGE (app2)-[:BY_CANDIDATE]->(p_ext)
+MERGE (app2)-[:FOR_JOB_OPENING]->(jo);
+
+// 4. Connect recruiters to applications
+MATCH (rec:Person {name: 'Ivan'}), (app:Application {id: 'APP001'}) MERGE (rec)-[:OVERSEES_APPLICATION]->(app);
+MATCH (rec:Person {name: 'Ivan'}), (app:Application {id: 'APP002'}) MERGE (rec)-[:OVERSEES_APPLICATION]->(app);
+
+// 5. Add interview stages (example for APP001)
+MATCH (app:Application {id: 'APP001'})
+CREATE (s1:InterviewStage {name: 'Phone Screen', date: date('2025-07-12'), outcome: 'Passed'})
+CREATE (s2:InterviewStage {name: 'Technical Interview', date: date('2025-07-15'), outcome: 'Pending'})
+MERGE (app)-[:HAS_STAGE {order: 1}]->(s1)
+MERGE (s1)-[:NEXT_STAGE]->(s2);
+
+// --- SCRIPT 4: INDEXES (IMPORTANT FOR PERFORMANCE) ---
+// Create indexes on frequently queried properties for faster lookups.
+// Run these once after your data model is stable.
+
+CREATE INDEX FOR (p:Person) ON (p.name);
+CREATE INDEX FOR (p:Person) ON (p.employeeId);
+CREATE INDEX FOR (c:Competency) ON (c.name);
+CREATE INDEX FOR (jr:JobRole) ON (jr.title);
+CREATE INDEX FOR (d:Department) ON (d.name);
+CREATE INDEX FOR (p:Project) ON (p.name);
+CREATE INDEX FOR (t:Team) ON (t.name);
+CREATE INDEX FOR (jo:JobOpening) ON (jo.id);
+CREATE INDEX FOR (app:Application) ON (app.id);
+CREATE INDEX FOR (app:Application) ON (app.status);
+
