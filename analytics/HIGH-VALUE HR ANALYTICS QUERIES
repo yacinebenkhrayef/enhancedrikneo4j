@@ -1,0 +1,173 @@
+// --- HIGH-VALUE HR ANALYTICS QUERIES (BASED ON ENHANCED DATABASE) ---
+
+// Objective: Uncover hidden patterns in hiring, team dynamics, and employee mobility.
+
+// --- 1. OVERVIEW & SKILL ANALYSIS ---
+
+// 1.1 What kinds of competencies do our active employees have, and how many?
+// (Enhanced: Focus on active employees and their competencies)
+MATCH (p:Person {employmentStatus: 'Active'})-[:HAS_COMPETENCY]->(c:Competency)
+RETURN c.name AS Competency, c.category AS Category, count(p) AS NumberOfPeople
+ORDER BY NumberOfPeople DESC;
+
+// 1.2 Find people with a specific set of skills (e.g., 'Python Programming' and 'Java Programming')
+// (Enhanced: Can also filter by current JobRole or Department)
+MATCH (p:Person)-[:HAS_COMPETENCY]->(c1:Competency {name: 'Python Programming'}),
+      (p)-[:HAS_COMPETENCY]->(c2:Competency {name: 'Java Programming'})
+OPTIONAL MATCH (p)-[:WORKS_IN]->(d:Department) // This relationship is expected from schema enhancement
+OPTIONAL MATCH (p)-[:HELD_ROLE]->(jr:JobRole) // This relationship is expected from schema enhancement
+RETURN p.first_name + ' ' + p.last_name AS PersonName, p.employeeId AS EmployeeID, p.location AS Location,
+       COLLECT(DISTINCT c1.name + ' (' + c1.category + ')') AS Skills,
+       COLLECT(DISTINCT c2.name + ' (' + c2.category + ')') AS OtherSkills,
+       d.name AS CurrentDepartment,
+       jr.title AS CurrentJobRole
+LIMIT 10;
+
+// 1.3 Identify skill gaps: What skills are required for open positions but are rare internally?
+// (Enhanced: Compares required skills for open JobOpenings with existing employee competencies)
+MATCH (jo:JobOpening {status: 'Open'})-[:IS_A_TYPE_OF]->(jr:JobRole)-[:REQUIRES_SKILL {minimumLevel: 'Expert'}]->(requiredSkill:Competency)
+WHERE NOT EXISTS {
+    MATCH (p:Person {employmentStatus: 'Active'})-[:HAS_COMPETENCY]->(requiredSkill)
+}
+RETURN requiredSkill.name AS SkillGap, COLLECT(DISTINCT jr.title) AS RolesRequiringSkill
+ORDER BY SkillGap;
+
+// --- 2. TEAM DYNAMICS & ORGANIZATIONAL STRUCTURE ---
+
+// 2.1 Find people who have worked together on the same project
+// (New query leveraging Project nodes and WORKS_ON relationship)
+MATCH (p1:Person)-[:WORKS_ON]->(proj:Project)<-[:WORKS_ON]-(p2:Person)
+WHERE p1 <> p2 // Ensure it's different people
+RETURN p1.first_name + ' ' + p1.last_name AS Person1, p2.first_name + ' ' + p2.last_name AS Person2, proj.name AS SharedProject,
+       p1.employeeId AS Person1ID, p2.employeeId AS Person2ID
+LIMIT 10;
+
+// 2.2 Identify managers and their direct reports
+// (New query leveraging MANAGES relationship)
+MATCH (manager:Person)-[:MANAGES]->(report:Person)
+RETURN manager.first_name + ' ' + manager.last_name AS Manager, report.first_name + ' ' + report.last_name AS DirectReport,
+       manager.employeeId AS ManagerID, report.employeeId AS ReportID
+ORDER BY Manager;
+
+// 2.3 Find people in the same department who are NOT managers but have high experience
+// (New query for potential future leaders or knowledge hubs, leveraging WORKS_IN)
+MATCH (p:Person)-[:WORKS_IN]->(d:Department)
+WHERE p.isManager = false AND p.yearsOfExperience > 5
+RETURN p.first_name + ' ' + p.last_name AS Person, p.yearsOfExperience AS YearsExperience, d.name AS Department
+ORDER BY d.name, p.yearsOfExperience DESC
+LIMIT 10;
+
+// --- 3. EMPLOYEE MOBILITY & CAREER PATHS ---
+
+// 3.1 Trace an employee's career path (sequence of roles held)
+// (Enhanced: Uses HELD_ROLE with dates to show progression)
+MATCH p=(person:Person {first_name: 'Alice', last_name: 'Smith'})-[:HELD_ROLE*]->(role:JobRole)
+RETURN nodes(p) AS RolesInOrder, relationships(p) AS Transitions
+ORDER BY [r IN relationships(p) | r.startDate]; // Order by start date of each role
+
+// 3.2 Find internal candidates for a new position based on skills and desired roles
+// (Enhanced: Combines HAS_COMPETENCY, REQUIRES_SKILL, and DESIRES_ROLE)
+MATCH (targetJr:JobRole {title: 'Senior Data Scientist'})-[:REQUIRES_SKILL]->(requiredSkill:Competency)
+WITH targetJr, COLLECT(requiredSkill) AS requiredSkills
+MATCH (candidate:Person {employmentStatus: 'Active'})-[:HAS_COMPETENCY]->(c:Competency)
+WHERE c IN requiredSkills
+WITH candidate, COUNT(c) AS matchedSkillsCount, requiredSkills, targetJr
+OPTIONAL MATCH (candidate)-[:DESIRES_ROLE]->(targetJr) AS desiredPath
+WHERE desiredPath IS NOT NULL
+RETURN candidate.first_name + ' ' + candidate.last_name AS Candidate, candidate.employeeId AS EmployeeID,
+       matchedSkillsCount,
+       [s IN requiredSkills | s.name] AS RequiredSkills,
+       [s IN COLLECT(c) | s.name] AS CandidateSkills,
+       CASE WHEN desiredPath IS NOT NULL THEN 'Yes' ELSE 'No' END AS DesiresThisRole
+ORDER BY matchedSkillsCount DESC, DesiresThisRole DESC
+LIMIT 10;
+
+// --- 4. HIRING BOTTLENECKS & RECRUITMENT ANALYSIS ---
+
+// 4.1 Identify job openings with a high number of applications but no hires yet
+// (New query to spot potential bottlenecks in the hiring funnel, leveraging Application and InterviewStage)
+MATCH (jo:JobOpening {status: 'Open'})<-[:FOR_JOB_OPENING]-(app:Application)
+WHERE NOT EXISTS { (app)-[:HAS_STAGE]->(:InterviewStage {name: 'Offer Accepted'}) } // Assuming 'Offer Accepted' means hired
+WITH jo, COUNT(app) AS NumberOfApplications
+WHERE NumberOfApplications > 2 // Adjust threshold as needed
+RETURN jo.title AS JobOpening, NumberOfApplications, jo.postedDate AS PostedDate
+ORDER BY NumberOfApplications DESC;
+
+// 4.2 Track the average time spent in each interview stage for a specific job opening
+// (New query for process optimization, leveraging InterviewStage and NEXT_STAGE)
+MATCH (jo:JobOpening {id: 'JOB001'})<-[:FOR_JOB_OPENING]-(app:Application)-[hs:HAS_STAGE]->(s1:InterviewStage)
+OPTIONAL MATCH (s1)-[:NEXT_STAGE]->(s2:InterviewStage)
+WHERE s2 IS NOT NULL
+WITH s1.name AS StageName, s1.date AS StartDate, s2.date AS EndDate
+WHERE EndDate IS NOT NULL
+RETURN StageName, avg(duration.between(StartDate, EndDate).days) AS AvgDaysInStage
+ORDER BY AvgDaysInStage DESC;
+
+// --- 5. INFLUENCERS & KNOWLEDGE HUBS (GRAPH ALGORITHMS) ---
+// IMPORTANT: These queries require the Neo4j Graph Data Science (GDS) library.
+// You'll need to project a graph and then run the algorithms.
+
+// 5.1 Identify top influencers using PageRank based on 'FRIEND_OF' and 'MANAGES' relationships
+// (Enhanced: Combines social and formal influence)
+// Project the graph first (run once per session or when schema changes)
+CALL gds.graph.project(
+    'hrInfluenceGraph',
+    'Person',
+    {
+        FRIEND_OF: {orientation: 'UNDIRECTED'},
+        MANAGES: {orientation: 'REVERSE'} // Manager is influenced by reports in some contexts
+    }
+);
+
+// Run PageRank
+CALL gds.pageRank.stream('hrInfluenceGraph')
+YIELD nodeId, score
+MATCH (p:Person) WHERE id(p) = nodeId
+RETURN p.first_name + ' ' + p.last_name AS Person, p.employeeId AS EmployeeID, score AS PageRankScore
+ORDER BY score DESC
+LIMIT 10;
+
+// 5.2 Identify knowledge hubs using Betweenness Centrality (people who are "bridges" in the network)
+// (Enhanced: Considering project and department connections)
+// Project a graph that includes collaboration and departmental links
+CALL gds.graph.project(
+    'hrKnowledgeGraph',
+    'Person',
+    {
+        WORKS_ON: {orientation: 'UNDIRECTED'}, // Collaboration on projects
+        WORKS_IN: {orientation: 'UNDIRECTED'}, // Shared department
+        HAS_COMPETENCY: {orientation: 'UNDIRECTED'} // Shared skills
+    }
+);
+
+// Run Betweenness Centrality
+CALL gds.betweenness.stream('hrKnowledgeGraph')
+YIELD nodeId, score
+MATCH (p:Person) WHERE id(p) = nodeId
+RETURN p.first_name + ' ' + p.last_name AS Person, p.employeeId AS EmployeeID, score AS BetweennessCentralityScore
+ORDER BY score DESC
+LIMIT 10;
+
+// --- 6. ADDITIONAL ANALYTICS (ADAPTED FROM RIK'S "OTHER RECOMMENDATIONS") ---
+
+// 6.1 Find people who have worked for specific companies (using the original 'Company' node)
+// (Adapted: Assuming 'Company' nodes still exist and 'WORKS_FOR'/'WORKED_FOR' are used)
+MATCH (p:Person)-[:WORKS_FOR|:WORKED_FOR]->(co:Company {name: 'Acme Corp'}) // Replace 'Acme Corp' with a company name from your data
+RETURN p.first_name + ' ' + p.last_name AS Person, p.employeeId AS EmployeeID,
+       COLLECT(DISTINCT co.name) AS CompaniesWorkedFor
+ORDER BY Person ASC;
+
+// 6.2 Find what kinds of competencies people who worked for a specific company have
+// (Adapted: Focus on competencies of people from a specific company)
+MATCH (p:Person)-[:WORKS_FOR|:WORKED_FOR]->(co:Company {name: 'Globex Corporation'}) // Replace with a company name
+MATCH (p)-[:HAS_COMPETENCY]->(c:Competency)
+RETURN c.name AS Competency, c.category AS Category, count(p) AS NumberOfPeople
+ORDER BY NumberOfPeople DESC;
+
+// --- CLEANUP FOR GDS ALGORITHMS (IMPORTANT!) ---
+// After running GDS algorithms, it's good practice to drop the projected graphs
+// to free up memory, especially in development environments.
+// Run these only when you are done with GDS queries for a session.
+// CALL gds.graph.drop('hrInfluenceGraph');
+// CALL gds.graph.drop('hrKnowledgeGraph');
+
