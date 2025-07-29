@@ -152,10 +152,11 @@ LIMIT 10;
 
 // 6.1 Find people who have worked for specific companies (using the original 'Company' node)
 // (Adapted: Assuming 'Company' nodes still exist and 'WORKS_FOR'/'WORKED_FOR' are used)
-MATCH (p:Person)-[:WORKS_FOR|:WORKED_FOR]->(co:Company {name: 'Acme Corp'}) // Replace 'Acme Corp' with a company name from your data
+MATCH (p:Person)-[:WORKS_FOR|:WORKED_FOR]->(co:Company {name: 'Lexiice'}) // Changed to an existing company name
 RETURN p.first_name + ' ' + p.last_name AS Person, p.employeeId AS EmployeeID,
        COLLECT(DISTINCT co.name) AS CompaniesWorkedFor
 ORDER BY Person ASC;
+
 
 // 6.2 Find what kinds of competencies people who worked for a specific company have
 // (Adapted: Focus on competencies of people from a specific company)
