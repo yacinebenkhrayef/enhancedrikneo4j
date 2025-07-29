@@ -25,9 +25,10 @@ LIMIT 10;
 
 // 1.3 Identify skill gaps: What skills are required for open positions but are rare internally?
 // (Enhanced: Compares required skills for open JobOpenings with existing employee competencies)
-MATCH (jo:JobOpening {status: 'Open'})-[:IS_A_TYPE_OF]->(jr:JobRole)-[:REQUIRES_SKILL {minimumLevel: 'Expert'}]->(requiredSkill:Competency)
-WHERE NOT EXISTS {
-    MATCH (p:Person {employmentStatus: 'Active'})-[:HAS_COMPETENCY]->(requiredSkill)
+MATCH (jo:JobOpening {status: 'Open'})-[:IS_A_TYPE_OF]->(jr:JobRole)-[r_rs:REQUIRES_SKILL]->(requiredSkill:Competency)
+WHERE r_rs.minimumLevel = 'Expert' // Filter for expert level required skills
+AND NOT EXISTS {
+    MATCH (p:Person {employmentStatus: 'Active'})-[:HAS_COMPETENCY {level: 'Expert'}]->(requiredSkill)
 }
 RETURN requiredSkill.name AS SkillGap, COLLECT(DISTINCT jr.title) AS RolesRequiringSkill
 ORDER BY SkillGap;
