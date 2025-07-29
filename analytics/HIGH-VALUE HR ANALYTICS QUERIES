@@ -90,7 +90,7 @@ LIMIT 10;
 MATCH (jo:JobOpening {status: 'Open'})<-[:FOR_JOB_OPENING]-(app:Application)
 WHERE NOT EXISTS { (app)-[:HAS_STAGE]->(:InterviewStage {name: 'Offer Accepted'}) } // Assuming 'Offer Accepted' means hired
 WITH jo, COUNT(app) AS NumberOfApplications
-WHERE NumberOfApplications > 2 // Adjust threshold as needed
+WHERE NumberOfApplications >= 2 // Adjust threshold as needed
 RETURN jo.title AS JobOpening, NumberOfApplications, jo.postedDate AS PostedDate
 ORDER BY NumberOfApplications DESC;
 
