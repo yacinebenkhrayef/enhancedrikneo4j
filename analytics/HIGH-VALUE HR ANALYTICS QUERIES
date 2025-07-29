@@ -72,13 +72,13 @@ MATCH (targetJr:JobRole {title: 'Senior Data Scientist'})-[:REQUIRES_SKILL]->(re
 WITH targetJr, COLLECT(requiredSkill) AS requiredSkills
 MATCH (candidate:Person {employmentStatus: 'Active'})-[:HAS_COMPETENCY]->(c:Competency)
 WHERE c IN requiredSkills
-WITH candidate, COUNT(c) AS matchedSkillsCount, requiredSkills, targetJr
-OPTIONAL MATCH (candidate)-[:DESIRES_ROLE]->(targetJr) AS desiredPath
+WITH candidate, COUNT(c) AS matchedSkillsCount, requiredSkills, targetJr, COLLECT(c) AS candidateCompetencies // Collected 'c' here
+OPTIONAL MATCH desiredPath = (candidate)-[:DESIRES_ROLE]->(targetJr) // Corrected: Assign alias to the path variable
 WHERE desiredPath IS NOT NULL
 RETURN candidate.first_name + ' ' + candidate.last_name AS Candidate, candidate.employeeId AS EmployeeID,
        matchedSkillsCount,
        [s IN requiredSkills | s.name] AS RequiredSkills,
-       [s IN COLLECT(c) | s.name] AS CandidateSkills,
+       [s IN candidateCompetencies | s.name] AS CandidateSkills, // Used the collected variable
        CASE WHEN desiredPath IS NOT NULL THEN 'Yes' ELSE 'No' END AS DesiresThisRole
 ORDER BY matchedSkillsCount DESC, DesiresThisRole DESC
 LIMIT 10;
