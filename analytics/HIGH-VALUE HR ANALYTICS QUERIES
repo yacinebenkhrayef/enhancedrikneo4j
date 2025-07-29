@@ -160,7 +160,7 @@ ORDER BY Person ASC;
 
 // 6.2 Find what kinds of competencies people who worked for a specific company have
 // (Adapted: Focus on competencies of people from a specific company)
-MATCH (p:Person)-[:WORKS_FOR|:WORKED_FOR]->(co:Company {name: 'Globex Corporation'}) // Replace with a company name
+MATCH (p:Person)-[:WORKS_FOR|:WORKED_FOR]->(co:Company {name: 'Doublein'}) // Replace with a company name
 MATCH (p)-[:HAS_COMPETENCY]->(c:Competency)
 RETURN c.name AS Competency, c.category AS Category, count(p) AS NumberOfPeople
 ORDER BY NumberOfPeople DESC;
