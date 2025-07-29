@@ -96,12 +96,11 @@ ORDER BY NumberOfApplications DESC;
 
 // 4.2 Track the average time spent in each interview stage for a specific job opening
 // (New query for process optimization, leveraging InterviewStage and NEXT_STAGE)
-MATCH (jo:JobOpening {id: 'JOB001'})<-[:FOR_JOB_OPENING]-(app:Application)-[hs:HAS_STAGE]->(s1:InterviewStage)
+MATCH (jo:JobOpening {id: 'JOB001'})<-[:FOR_JOB_OPENING]-(app:Application)-[hs1:HAS_STAGE]->(s1:InterviewStage)
 OPTIONAL MATCH (s1)-[:NEXT_STAGE]->(s2:InterviewStage)
-WHERE s2 IS NOT NULL
-WITH s1.name AS StageName, s1.date AS StartDate, s2.date AS EndDate
-WHERE EndDate IS NOT NULL
-RETURN StageName, avg(duration.between(StartDate, EndDate).days) AS AvgDaysInStage
+OPTIONAL MATCH (app)-[hs2:HAS_STAGE]->(s2) // Match the HAS_STAGE relationship for s2
+WHERE s2 IS NOT NULL AND hs2 IS NOT NULL // Ensure both stage and its HAS_STAGE relationship exist
+RETURN s1.name AS StageName, avg(duration.between(hs1.date, hs2.date).days) AS AvgDaysInStage // Use dates from HAS_STAGE relationships
 ORDER BY AvgDaysInStage DESC;
 
 // --- 5. INFLUENCERS & KNOWLEDGE HUBS (GRAPH ALGORITHMS) ---
