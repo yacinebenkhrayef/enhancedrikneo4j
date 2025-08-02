@@ -1,0 +1,128 @@
+// --- SCRIPT 1: ENHANCED HR DATA MODEL & INGESTION ---
+// Objective: Create a complete, functional HR graph dataset based on the project requirements.
+// This script is designed to be run as a single block to avoid syntax errors.
+
+// --- 1. Create a set of HR-specific nodes for our graph ---
+
+// Departments
+MERGE (d_eng:Department {name: 'Engineering'});
+MERGE (d_hr:Department {name: 'Human Resources'});
+MERGE (d_mktg:Department {name: 'Marketing'});
+
+// Job Roles
+MERGE (jr_se:JobRole {title: 'Software Engineer', description: 'Develops and maintains software applications.'});
+MERGE (jr_sd:JobRole {title: 'Senior Developer', description: 'Leads development projects and mentors junior staff.'});
+MERGE (jr_hm:JobRole {title: 'HR Manager', description: 'Oversees human resources operations and strategy.'});
+MERGE (jr_hr:JobRole {title: 'HR Recruiter', description: 'Manages the full recruitment lifecycle.'});
+MERGE (jr_ma:JobRole {title: 'Marketing Analyst', description: 'Analyzes market trends and campaign performance.'});
+MERGE (jr_sm:JobRole {title: 'Social Media Manager', description: 'Manages social media presence and content.'});
+
+// Competencies
+MERGE (c_py:Competency {name: 'Python', category: 'Programming'});
+MERGE (c_js:Competency {name: 'JavaScript', category: 'Programming'});
+MERGE (c_db:Competency {name: 'Database Design', category: 'Software Development'});
+MERGE (c_rs:Competency {name: 'Recruiting Strategy', category: 'HR'});
+MERGE (c_pa:Competency {name: 'Performance Analysis', category: 'Marketing'});
+MERGE (c_cn:Competency {name: 'Content Creation', category: 'Marketing'});
+MERGE (c_leadership:Competency {name: 'Leadership', category: 'Soft Skill'});
+MERGE (c_communication:Competency {name: 'Communication', category: 'Soft Skill'});
+
+
+// --- 2. Create the organizational structure: employees and their relationships ---
+
+// Create a Manager for the Engineering Department
+MERGE (p_bob:Person {name: 'Bob', employeeId: 'E101'})
+SET p_bob.email = 'bob@acme.com', p_bob.yearsOfExperience = 15;
+MERGE (p_bob)-[:WORKS_IN]->(d_eng);
+MERGE (p_bob)-[:HELD_ROLE]->(jr_sd);
+
+// Create employees in the Engineering Department
+MERGE (p_alice:Person {name: 'Alice', employeeId: 'E102'})
+SET p_alice.email = 'alice@acme.com', p_alice.yearsOfExperience = 8;
+MERGE (p_alice)-[:WORKS_IN]->(d_eng);
+MERGE (p_alice)-[:HELD_ROLE]->(jr_se);
+
+MERGE (p_charlie:Person {name: 'Charlie', employeeId: 'E103'})
+SET p_charlie.email = 'charlie@acme.com', p_charlie.yearsOfExperience = 5;
+MERGE (p_charlie)-[:WORKS_IN]->(d_eng);
+MERGE (p_charlie)-[:HELD_ROLE]->(jr_se);
+
+// Establish the management hierarchy
+MERGE (p_bob)-[:MANAGES]->(p_alice);
+MERGE (p_bob)-[:MANAGES]->(p_charlie);
+MERGE (p_alice)-[:REPORTS_TO]->(p_bob);
+MERGE (p_charlie)-[:REPORTS_TO]->(p_bob);
+
+// Add competencies for employees
+MERGE (p_bob)-[:HAS_COMPETENCY {level: 'Expert'}]->(c_js);
+MERGE (p_bob)-[:HAS_COMPETENCY {level: 'Advanced'}]->(c_db);
+MERGE (p_bob)-[:HAS_COMPETENCY {level: 'Expert'}]->(c_leadership);
+MERGE (p_alice)-[:HAS_COMPETENCY {level: 'Advanced'}]->(c_py);
+MERGE (p_alice)-[:HAS_COMPETENCY {level: 'Intermediate'}]->(c_db);
+MERGE (p_charlie)-[:HAS_COMPETENCY {level: 'Advanced'}]->(c_py);
+
+
+// --- 3. Create a hiring pipeline scenario ---
+
+// A Job Opening
+MERGE (jo_se:JobOpening {id: 'JOB001', title: 'Software Engineer', status: 'Open', postedDate: '2023-01-15'})
+MERGE (jo_se)-[:FOR_DEPARTMENT]->(d_eng);
+MERGE (jo_se)-[:IS_A_TYPE_OF]->(jr_se);
+
+// Skills required for the job opening
+MERGE (jr_se)-[:REQUIRES_SKILL {minimumLevel: 'Advanced'}]->(c_py);
+MERGE (jr_se)-[:REQUIRES_SKILL {minimumLevel: 'Intermediate'}]->(c_db);
+
+// Candidates apply for the job
+MERGE (p_dave:Person {name: 'Dave', employeeId: 'CAND001', employmentStatus: 'Candidate'});
+MERGE (p_dave)-[:APPLIED_FOR]->(jo_se);
+
+// The application and its stages
+MERGE (app_dave:Application {id: 'APP001', status: 'In Review'});
+MERGE (p_dave)-[:BY_CANDIDATE]->(app_dave);
+MERGE (app_dave)-[:FOR_JOB_OPENING]->(jo_se);
+
+// Interview Stages
+MERGE (s1:InterviewStage {name: 'Application Submitted'});
+MERGE (s2:InterviewStage {name: 'Resume Review'});
+MERGE (s3:InterviewStage {name: 'Technical Interview'});
+MERGE (s4:InterviewStage {name: 'Final Interview'});
+
+// Connect the application to the interview stages
+MERGE (app_dave)-[:HAS_STAGE {date: '2023-01-20'}]->(s1);
+MERGE (app_dave)-[:HAS_STAGE {date: '2023-01-22'}]->(s2);
+MERGE (app_dave)-[:HAS_STAGE {date: '2023-01-25'}]->(s3);
+MERGE (app_dave)-[:HAS_STAGE {date: '2023-01-28'}]->(s4);
+
+// Define the progression of stages
+MERGE (s1)-[:NEXT_STAGE]->(s2);
+MERGE (s2)-[:NEXT_STAGE]->(s3);
+MERGE (s3)-[:NEXT_STAGE]->(s4);
+
+
+// --- 4. Add more rich data for analytics ---
+
+// Create another job opening and applications
+MERGE (jo_sm:JobOpening {id: 'JOB002', title: 'Social Media Manager', status: 'Open', postedDate: '2023-02-01'})
+MERGE (jo_sm)-[:FOR_DEPARTMENT]->(d_mktg);
+MERGE (jo_sm)-[:IS_A_TYPE_OF]->(jr_sm);
+
+MERGE (jr_sm)-[:REQUIRES_SKILL {minimumLevel: 'Advanced'}]->(c_cn);
+
+MERGE (p_eve:Person {name: 'Eve', employeeId: 'CAND002', employmentStatus: 'Candidate'});
+MERGE (app_eve:Application {id: 'APP002', status: 'Screening'});
+MERGE (p_eve)-[:APPLIED_FOR]->(jo_sm);
+MERGE (p_eve)-[:BY_CANDIDATE]->(app_eve);
+MERGE (app_eve)-[:FOR_JOB_OPENING]->(jo_sm);
+
+// Add competencies for other employees
+MERGE (p_frank:Person {name: 'Frank', employeeId: 'E104'})
+SET p_frank.email = 'frank@acme.com', p_frank.yearsOfExperience = 10;
+MERGE (p_frank)-[:WORKS_IN]->(d_mktg);
+MERGE (p_frank)-[:HAS_COMPETENCY {level: 'Expert'}]->(c_cn);
+MERGE (p_frank)-[:HAS_COMPETENCY {level: 'Intermediate'}]->(c_pa);
+
+// Add "friend of" relationships to demonstrate social networks
+MATCH (p1:Person {name: 'Alice'}), (p2:Person {name: 'Frank'})
+MERGE (p1)-[:FRIEND_OF]->(p2)
+MERGE (p2)-[:FRIEND_OF]->(p1);
